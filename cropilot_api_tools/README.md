@@ -64,16 +64,16 @@ pip install -r requirements-trainer.txt
 
 2. Start trainer script. Provide the group API key, a name for the new model, and the list of title IDs that should be used for training. After the script finishes, you will be able to access the new model in Cropilot UI (or by using it in the `--model` parameter in `uploader`).
 ```
-python3 trainer.py --api_key <GROUP API KEY> --model_name my-new-model --title_ids title1 title2 title3
+python3 trainer.py --api-key <GROUP API KEY> --model-name my-new-model --title-ids title1 title2 title3
 
 options:
   -h, --help            show this help message and exit
-  --api_url API_URL     [Optional] Base URL of the API, defaults to https://api.ai-orezy.trinera.cloud/
-  --base_model BASE_MODEL
+  --api-url API_URL     [Optional] Base URL of the API, defaults to https://api.ai-orezy.trinera.cloud/
+  --base-model BASE_MODEL
                         [Optional] Path to the base YOLO model to fine-tune, defaults to base_models/default.pt
-  --api_key API_KEY     Group API key for authentication
-  --model_name MODEL_NAME
+  --api-key API_KEY     Group API key for authentication
+  --model-name MODEL_NAME
                         New name of the fine-tuned model
-  --title_ids TITLE_IDS [TITLE_IDS ...]
+  --title-ids TITLE_IDS [TITLE_IDS ...]
                         List of title IDs to train on
 ```
