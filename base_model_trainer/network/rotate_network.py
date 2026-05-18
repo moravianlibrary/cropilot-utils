@@ -232,6 +232,10 @@ def save_checkpoint(path, model, optimizer, epoch, best_mae):
     )
 
 
+def save_checkpoint_compressed(path, model):
+    torch.save({"model": model.state_dict()}, path)
+    
+
 def load_checkpoint(path, model, optimizer=None, map_location="cpu"):
     ckpt = torch.load(path, map_location=map_location)
     model.load_state_dict(ckpt["model"])

@@ -49,6 +49,21 @@ class CropilotUploader:
             raise Exception("Failed to authenticate. Please check your API key.") from e
 
         print(f"Successfully authenticated to group: {group['name']}")
+    
+    def get_settings(self, model: str | None):
+        """Returns settings dict for API request based on model choice."""
+        response = requests.get(
+            url=urljoin(self.api_url, "models")
+        )
+        response.raise_for_status()
+        models = response.json()
+
+        settings = {}
+        if model in models["available_models"]:
+            settings["crop_model"] = model
+        if model in models["rotate_models"]:
+            settings["rotation_model"] = model
+        return settings
 
     def upload_and_compress(self, input_folder: str, model: str | None, name: str):
         """Uploads and compresses images to the Page Trace API.
@@ -58,7 +73,7 @@ class CropilotUploader:
             model (str | None): Type of crop to perform ("inner" or "outer").
             name (str): Title name of the book.
         """
-        args = {"settings": {"crop_model": model}, "external_id": name} if model else {"external_id": name}
+        args = {"settings": self.get_settings(model), "external_id": name}
         response = requests.post(
             url=urljoin(self.api_url, f"create?group_id={self.group_id}"),
             headers={"X-API-Key": self.api_key},
@@ -71,7 +86,11 @@ class CropilotUploader:
         print(f"Uploading {len(images)} images...")
         for img in images:
             with open(os.path.join(input_folder, img), "rb") as f:
-                im = Image.open(f)
+                try:
+                    im = Image.open(f)
+                except Exception as e:
+                    print(f"Error opening image {img}, skipping. Error: {e}")
+                    continue
                 im = im.convert("RGB")
                 im = ImageOps.exif_transpose(im)
                 im.thumbnail((1200, 1200))

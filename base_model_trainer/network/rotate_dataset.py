@@ -132,12 +132,13 @@ class PageAngleDataset(Dataset):
         # Load image
         img_path = self.image_paths[idx]
         img = cv2.imread(img_path)
+        if self.image_bboxes[idx] == ():
+            self.image_bboxes[idx] = (0.5, 0.5, 1.0, 1.0)  # default to full image if bbox is invalid
 
         angle = 0.0
         # Load crop coordinates
         img_h, img_w, _ = img.shape
         xc, yc, w, h = self._denormalize_bbox(self.image_bboxes[idx], img_w, img_h)
-        w, h = int(w * 0.05), int(h * 0.05)  # add small padding to bbox
 
         try:
             # Augment images: rotation, translation jitter

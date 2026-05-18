@@ -40,7 +40,8 @@ def get_bbox_vectors(dir: str) -> list[tuple[float, float, float, float]]:
             coords = list(map(float, line.split(" ")[1:]))
 
             if not len(coords) == 4:
-                raise ValueError(f"Invalid bbox vector in file {fp}: {line}")
+                coords = [0.5, 0.5, 1.0, 1.0]
+                print(f"Warning: file {fp} has invalid bbox format, using default {coords}")
 
             bbox_vectors.append(tuple(coords))
 
