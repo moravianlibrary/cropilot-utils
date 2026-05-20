@@ -50,8 +50,11 @@ class CropilotUploader:
 
         print(f"Successfully authenticated to group: {group['name']}")
     
-    def get_settings(self, model: str | None):
+    def get_settings(self, crop_model: str | None, rotation_model: str | None) -> dict:
         """Returns settings dict for API request based on model choice."""
+        if crop_model is None and rotation_model is None:
+            return None
+        
         response = requests.get(
             url=urljoin(self.api_url, "models")
         )
@@ -59,13 +62,17 @@ class CropilotUploader:
         models = response.json()
 
         settings = {}
-        if model in models["available_models"]:
-            settings["crop_model"] = model
-        if model in models["rotate_models"]:
-            settings["rotation_model"] = model
+        if crop_model in models["crop_models"]:
+            settings["crop_model"] = crop_model
+        else:
+            print(f"Warning: crop model '{crop_model}' not found in available models, using default.")
+        if rotation_model in models["rotation_models"]:
+            settings["rotation_model"] = rotation_model
+        else:
+            print(f"Warning: rotation model '{rotation_model}' not found in available models, using default.")
         return settings
 
-    def upload_and_compress(self, input_folder: str, model: str | None, name: str):
+    def upload_and_compress(self, input_folder: str, crop_model: str | None, rotation_model: str | None, name: str):
         """Uploads and compresses images to the Page Trace API.
 
         Args:
@@ -73,7 +80,7 @@ class CropilotUploader:
             model (str | None): Type of crop to perform ("inner" or "outer").
             name (str): Title name of the book.
         """
-        args = {"settings": self.get_settings(model), "external_id": name}
+        args = {"settings": self.get_settings(crop_model, rotation_model), "external_id": name}
         response = requests.post(
             url=urljoin(self.api_url, f"create?group_id={self.group_id}"),
             headers={"X-API-Key": self.api_key},
@@ -274,10 +281,17 @@ if __name__ == "__main__":
         help="Uploads downsized images and schedules job for predictions, outputs link where results will be available.",
     )
     upload_parser.add_argument(
-        "--model",
+        "--crop-model",
         type=str,
         required=False,
-        help="Model name to use for prediction",
+        help="Model name to use for position prediction",
+        default=None,
+    )
+    upload_parser.add_argument(
+        "--rotation-model",
+        type=str,
+        required=False,
+        help="Model name to use for angle prediction",
         default=None,
     )
     upload_parser.add_argument(
@@ -316,7 +330,8 @@ if __name__ == "__main__":
             args.name = os.path.basename(args.input_folder)
         tracer.upload_job(
             input_folder=args.input_folder,
-            model=args.model,
+            crop_model=args.crop_model,
+            rotation_model=args.rotation_model,
             name=args.name,
         )
     elif args.command == "download":
