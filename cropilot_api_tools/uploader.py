@@ -53,6 +53,7 @@ class CropilotUploader:
     def get_settings(self, crop_model: str | None, rotation_model: str | None) -> dict:
         """Returns settings dict for API request based on model choice."""
         if crop_model is None and rotation_model is None:
+            print("No models specified, using default group settings.")
             return None
         
         response = requests.get(
@@ -65,11 +66,11 @@ class CropilotUploader:
         if crop_model in models["crop_models"]:
             settings["crop_model"] = crop_model
         else:
-            print(f"Warning: crop model '{crop_model}' not found in available models, using default.")
+            print(f"Warning: crop model '{crop_model}' not found in available models, using 'default'.")
         if rotation_model in models["rotation_models"]:
             settings["rotation_model"] = rotation_model
         else:
-            print(f"Warning: rotation model '{rotation_model}' not found in available models, using default.")
+            print(f"Warning: rotation model '{rotation_model}' not found in available models, using 'text'.")
         return settings
 
     def upload_and_compress(self, input_folder: str, crop_model: str | None, rotation_model: str | None, name: str):
@@ -217,7 +218,7 @@ class CropilotUploader:
 
         print(f"Success! Cropped images saved to {output_folder}")
 
-    def upload_job(self, input_folder: str, model: str, name: str):
+    def upload_job(self, input_folder: str, crop_model: str, rotation_model: str, name: str):
         """Runs the full Page Trace process: upload, process, download, and crop.
 
         Args:
@@ -227,7 +228,7 @@ class CropilotUploader:
             name (str): Title name of the book.
         """
         try:
-            self.upload_and_compress(input_folder, model, name)
+            self.upload_and_compress(input_folder, crop_model, rotation_model, name)
             self.process()
         except Exception as e:
             if self.id:
