@@ -19,13 +19,14 @@ edit them to your needs before calling the second script.
 python3 uploader.py upload --api-key <GROUP API KEY> --input-folder sample_input
 
 options:
-  -h, --help            show this help message and exit
-  --api-key API_KEY     API key for authentication within given group, obtain from group settings in the web app
-  --api-url API_URL     [Optional] Base URL of the Page Trace API, defaults to https://api.ai-orezy.trinera.cloud
+  -h, --help              show this help message and exit
+  --api-key API_KEY       API key for authentication within given group, obtain from group settings in the web app
+  --api-url API_URL       [Optional] Base URL of the Page Trace API, defaults to https://api.ai-orezy.trinera.cloud
   --input-folder INPUT_FOLDER
-                        Input folder path (containing images to process)
-  --model MODEL         [Optional] Model name to use for prediction, defaults to group default
-  --name NAME           [Optional] Custom title name, defaults to input folder name
+                          Input folder path (containing images to process)
+  --crop-model MODEL      [Optional] Model name to use for page prediction, defaults to group default
+  --rotation-model MODEL  [Optional] Model name to use for angle prediction, currently available are 'text' and 'edge', defaults to group default
+  --name NAME             [Optional] Custom title name, defaults to input folder name
 ```
 
 3. Download predictions and crop your original images from the local folder.
