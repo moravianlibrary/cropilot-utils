@@ -1,74 +1,36 @@
-# Cropilot AI
+# Cropilot utils
 
-This repository hosts models used to predict tranformation steps needed to extract pages from scanned books and other printed media.
-It is split into *base_model_trainer* (main codebase for the ML models), *scripts* (data analysis), and *cropilot_api_tools* (set of scripts for creating new content in the app). We use 2 models to create page predictions:
+This repository contains supporting tools and machine learning code for [Cropilot](https://github.com/moravianlibrary/cropilot), an AI-powered application for automatically cropping scanned documents.
 
-## Finetuned YOLO model
+Cropilot utils provides the models and scripts used to detect pages in scanned books, newspapers, periodicals, and other printed media. These components support the main Cropilot application by predicting page locations, rotation angles, and crop instructions that can later be reviewed in the Cropilot editor or applied automatically.
 
-A finetuned YOLO network based on YOLO11s (see: https://docs.ultralytics.com/models/yolo11/). It is used to predict the number of pages in a document together with its location.
+## Models
 
-## RotateNET
+The repository contains the training code for the computer vision models used by Cropilot. If you want to train a model from scratch, see the model training tutorial:
 
-RotateNET is a ResNET based model used to predict angle of each page.
+[Train a Cropilot model from scratch](./base_model_trainer/README.md)
 
+Cropilot currently uses two models to generate page predictions.
 
-# Dataset creation
+### Fine-tuned YOLO model
 
-## Input
+Cropilot uses a fine-tuned YOLO model based on [YOLO11s](https://docs.ultralytics.com/models/yolo11/) to detect the number and position of pages in each scan.
 
-The dataset is created based on ScanTailor metadata files. Your folders should follow this structure:
+### RotateNET
 
-```text
-scan-id/
-├─ rawdata/
-│  ├─ 1/
-│  │  └─ <*.tif images>
-│  ├─ 2/
-│  └─ ...
-└─ scanTailor/
-    ├─ 1.scanTailor
-    ├─ 2.scanTailor
-    └─ ...
-```
+RotateNET is a ResNet-based model that predicts the rotation angle of each detected page so the final crop can be properly aligned.
 
-## Steps
+## Cropilot Tools
 
-1. Compress the input data
-   - Run:
-   ```
-   base_model_trainer/create_dataset/compress_input_images.py
-   ```
-   - The script compressed the input structure described above from tifs into jpgs, and saves in in a format used by other scripts. 
+The `cropilot_api_tools` directory contains utility scripts for working with the Cropilot API. These scripts are intended for larger batch workflows that go beyond the simple upload flow available in the web UI.
 
-2. Extract ScanTailor metadata
-   - Run:
-     ```
-     base_model_trainer/create_dataset/extract_scantailor_data.py
-     ```
-   - This script extracts crop coordinates and other metadata from the `.scanTailor` files and saves them as metadata.json files, stored in their respective folder.
-   - It also cleans mistakes in the training data and assigns objects to classes: `page`, `back title cover`, and `unified doublepage`.
+Cropilot Tools can be used to:
 
-3. Create dataset structure
-   - Run:
-     ```
-     base_model_trainer/create_dataset/create_yolo_dataset.py
-     ```
-   - It consumes the JSONs produced in step 1 and arranges files into the structure expected by Ultralytics YOLO (train / val / test). See: https://docs.ultralytics.com/datasets/detect/
-   - Images are padded by 10 % from left/right. This ensures rotation augmentation can be applied without getting page edges out ouf frame.
+- Upload scan batches to the Cropilot editor.
+- Download Cropilot-generated crop instructions.
+- Apply crop instructions to original image files.
+- Fine-tune custom models for your own document datasets.
 
-4. Assign classes and clean up
-   - Run:
-     ```
-     base_model_trainer/create_dataset/assign_classes_and_cleanup.py
-     ```
-   - This script cleans mistakes in the training data and assigns objects to classes: `page`, `back title cover`, and `unified doublepage`.
+See the Cropilot Tools documentation for setup and usage instructions:
 
-
-## Output
-
-You can use the output structure as an input for rotate and crop finetune nets.
-
-# Training
-
-Scripts for model finetuning are stored in `base_model_trainer.training.crop_train` and `base_model_trainer.training.rotate_train`. Both models utilize the same dataset.
-Training reports are periodically saved to CometML, set your environment variable COMET_ML_API_KEY to enable this.
+[Cropilot Tools Guide](./cropilot_api_tools/README.md)
