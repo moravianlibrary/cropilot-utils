@@ -5,10 +5,19 @@ import os
 from PIL import Image, ImageOps
 from urllib.parse import urljoin
 import cv2
+import numpy as np
 import requests
 
 
 Image.MAX_IMAGE_PIXELS = 933120000
+
+
+def read_image_unicode_safe(image_path: str):
+    """Reads an image from paths containing non-ASCII characters on Windows."""
+    image_bytes = np.fromfile(image_path, dtype=np.uint8)
+    if image_bytes.size == 0:
+        return None
+    return cv2.imdecode(image_bytes, cv2.IMREAD_UNCHANGED)
 
 
 class CropilotUploader:
@@ -169,8 +178,13 @@ class CropilotUploader:
         print(f"Cropping {len(images)} images...")
 
         for img_name, coordinate in zip(images, self.coordinates):
-            im = cv2.imread(os.path.join(input_folder, img_name))
-            h, w = im.shape[0], im.shape[1]
+            image_path = os.path.join(input_folder, img_name)
+            im = read_image_unicode_safe(image_path)
+            if im is None:
+                print(f"Error opening image {img_name}, skipping crop.")
+                continue
+
+            h, w = im.shape[:2]
             for i, page in enumerate(coordinate["pages"]):
                 output_image = im.copy()
 
