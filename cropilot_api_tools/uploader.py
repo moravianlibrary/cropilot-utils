@@ -28,7 +28,7 @@ class CropilotUploader:
 
     def __init__(self, api_url: str, api_key: str):
         self.api_url = api_url
-        self.web_url = "https://orezy.test.trinera.cloud"
+        self.web_url = "https://app.cropilot.cz"
         self.id = None
         self.coordinates = None
         self.api_key = api_key
@@ -102,6 +102,9 @@ class CropilotUploader:
         images = sorted(os.listdir(input_folder))
         print(f"Uploading {len(images)} images...")
         for img in images:
+            if not img.lower().endswith((".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")):
+                print(f"Skipping non-image file: {img}")
+                continue
             with open(os.path.join(input_folder, img), "rb") as f:
                 try:
                     im = Image.open(f)
@@ -268,7 +271,7 @@ class CropilotUploader:
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="page_tracer.py")
+    parser = argparse.ArgumentParser(prog="uploader.py")
 
     common = argparse.ArgumentParser(add_help=False)
     common.add_argument(
@@ -280,8 +283,8 @@ if __name__ == "__main__":
         "--api-url",
         type=str,
         required=False,
-        help="Base URL of the Page Trace API, defaults to https://api.ai-orezy.trinera.cloud",
-        default="https://api.ai-orezy.trinera.cloud",
+        help="Base URL of the Cropilot API, defaults to https://api.cropilot.trinera.cloud",
+        default="https://api.cropilot.trinera.cloud",
     )
     common.add_argument(
         "--input-folder",

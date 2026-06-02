@@ -300,8 +300,8 @@ if __name__ == "__main__":
     parser.add_argument(
         "--api-url",
         type=str,
-        default="https://api.ai-orezy.trinera.cloud/",
-        help="Base URL of the API (default: https://api.ai-orezy.trinera.cloud/)",
+        default="https://api.cropilot.trinera.cloud/",
+        help="Base URL of the API (default: https://api.cropilot.trinera.cloud/)",
     )
     parser.add_argument(
         "--base-model",
