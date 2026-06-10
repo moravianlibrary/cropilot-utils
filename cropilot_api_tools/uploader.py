@@ -2,6 +2,8 @@ import argparse
 import json
 from io import BytesIO
 import os
+import shutil
+import subprocess
 from PIL import Image, ImageOps
 from urllib.parse import urljoin
 import cv2
@@ -10,6 +12,45 @@ import requests
 
 
 Image.MAX_IMAGE_PIXELS = 933120000
+SUPPORTED_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")
+
+
+def find_exiftool() -> str | None:
+    """Finds ExifTool on PATH."""
+    return shutil.which("exiftool")
+
+
+def copy_metadata_with_exiftool(source_path: str, output_path: str):
+    """Copies the original metadata tree and profiles onto a cropped output image."""
+    exiftool = find_exiftool()
+    if not exiftool:
+        raise RuntimeError(
+            "ExifTool was not found. Install exiftool at https://exiftool.org/install.html "
+            "to preserve full TIFF/EXIF metadata."
+        )
+
+    command = [
+        exiftool,
+        "-TagsFromFile",
+        source_path,
+        "-all:all",
+        "-icc_profile",
+        "-overwrite_original",
+        output_path,
+    ]
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode != 0:
+        details = result.stderr.strip() or result.stdout.strip()
+        raise RuntimeError(f"ExifTool failed for {output_path}: {details}")
+
+
+def image_names(input_folder: str) -> list[str]:
+    """Returns supported image filenames sorted the same way for upload and crop."""
+    return sorted(
+        name
+        for name in os.listdir(input_folder)
+        if name.lower().endswith(SUPPORTED_IMAGE_EXTENSIONS)
+    )
 
 
 def read_image_unicode_safe(image_path: str):
@@ -36,15 +77,7 @@ class CropilotUploader:
         self.authenticate()
 
     def authenticate(self) -> str:
-        """Authenticates with the API and returns an access token.
-
-        Args:
-            api_url (str): Base URL of the API.
-            username (str): API username.
-            password (str): API password.
-
-        Returns:
-            str: Access token.
+        """Authenticates with the API and stores the current group ID.
         """
         try:
             response = requests.get(
@@ -59,7 +92,7 @@ class CropilotUploader:
 
         print(f"Successfully authenticated to group: {group['name']}")
     
-    def get_settings(self, crop_model: str | None, rotation_model: str | None) -> dict:
+    def get_settings(self, crop_model: str | None, rotation_model: str | None) -> dict | None:
         """Returns settings dict for API request based on model choice."""
         if crop_model is None and rotation_model is None:
             print("No models specified, using default group settings.")
@@ -72,15 +105,24 @@ class CropilotUploader:
         models = response.json()
 
         settings = {}
-        if crop_model in models["crop_models"]:
-            settings["crop_model"] = crop_model
-        else:
-            print(f"Warning: crop model '{crop_model}' not found in available models, using 'default'.")
-        if rotation_model in models["rotation_models"]:
-            settings["rotation_model"] = rotation_model
-        else:
-            print(f"Warning: rotation model '{rotation_model}' not found in available models, using 'text'.")
-        return settings
+        if crop_model is not None:
+            if crop_model in models["crop_models"]:
+                settings["crop_model"] = crop_model
+            else:
+                print(
+                    f"Warning: crop model '{crop_model}' not found in available models, "
+                    "using group default."
+                )
+
+        if rotation_model is not None:
+            if rotation_model in models["rotation_models"]:
+                settings["rotation_model"] = rotation_model
+            else:
+                print(
+                    f"Warning: rotation model '{rotation_model}' not found in available models, "
+                    "using group default."
+                )
+        return settings or None
 
     def upload_and_compress(self, input_folder: str, crop_model: str | None, rotation_model: str | None, name: str):
         """Uploads and compresses images to the Page Trace API.
@@ -99,12 +141,9 @@ class CropilotUploader:
         response.raise_for_status()
         self.id = response.json()["id"]
 
-        images = sorted(os.listdir(input_folder))
+        images = image_names(input_folder)
         print(f"Uploading {len(images)} images...")
         for img in images:
-            if not img.lower().endswith((".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")):
-                print(f"Skipping non-image file: {img}")
-                continue
             with open(os.path.join(input_folder, img), "rb") as f:
                 try:
                     im = Image.open(f)
@@ -177,8 +216,14 @@ class CropilotUploader:
             input_folder (str): Path to the folder containing input images.
             output_folder (str): Path to the folder to save cropped images.
         """
-        images = sorted(os.listdir(input_folder))
+        images = image_names(input_folder)
+        os.makedirs(output_folder, exist_ok=True)
         print(f"Cropping {len(images)} images...")
+        if len(images) != len(self.coordinates):
+            print(
+                f"Warning: found {len(images)} input images but {len(self.coordinates)} "
+                "coordinate entries. Cropping will use matching sorted pairs only."
+            )
 
         for img_name, coordinate in zip(images, self.coordinates):
             image_path = os.path.join(input_folder, img_name)
@@ -232,10 +277,17 @@ class CropilotUploader:
                         pil_img = Image.fromarray(output_image)
 
                 pil_img.save(output_path, format=img_extension.upper(), **save_kwargs)
+                copy_metadata_with_exiftool(image_path, output_path)
 
         print(f"Success! Cropped images saved to {output_folder}")
 
-    def upload_job(self, input_folder: str, crop_model: str, rotation_model: str, name: str):
+    def upload_job(
+        self,
+        input_folder: str,
+        crop_model: str | None,
+        rotation_model: str | None,
+        name: str,
+    ):
         """Runs the full Page Trace process: upload, process, download, and crop.
 
         Args:
