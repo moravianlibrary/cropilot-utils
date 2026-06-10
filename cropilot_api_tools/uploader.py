@@ -2,8 +2,11 @@ import argparse
 import json
 from io import BytesIO
 import os
+from pathlib import Path
+import platform
 import shutil
 import subprocess
+import sys
 from PIL import Image, ImageOps
 from urllib.parse import urljoin
 import cv2
@@ -17,6 +20,11 @@ SUPPORTED_IMAGE_EXTENSIONS = (".jpg", ".jpeg", ".png", ".tif", ".tiff", ".bmp")
 
 def find_exiftool() -> str | None:
     """Finds ExifTool on PATH."""
+    if platform.system() == "Windows":
+        if getattr(sys, "frozen", False):
+            return Path(sys.executable).resolve().parent
+        return Path(__file__).resolve().parent / "exiftool.exe"
+
     return shutil.which("exiftool")
 
 
@@ -25,8 +33,10 @@ def copy_metadata_with_exiftool(source_path: str, output_path: str):
     exiftool = find_exiftool()
     if not exiftool:
         raise RuntimeError(
-            "ExifTool was not found. Install exiftool at https://exiftool.org/install.html "
-            "to preserve full TIFF/EXIF metadata."
+            "ExifTool was not found.\n\n"
+            "Install ExifTool (https://exiftool.org/install.html), then either:\n"
+            "1. Add exiftool to your PATH, or\n"
+            "2. Put exiftool.exe in the same folder as this program."
         )
 
     command = [

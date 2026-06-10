@@ -17,13 +17,29 @@ This makes it possible to use lightweight preview images for AI processing and m
 
 #### 1. Install dependencies
 
+First of all, install python dependencies with:
+
 ```bash
 pip install -r requirements-uploader.txt
 ```
 
+Then, download **Exif Tool** (a postprocessing tool used to copy TIFF metadata from uncropped images). Download based on your OS:
+
+Ubuntu / Debian: `sudo apt install libimage-exiftool-perl`
+
+Fedora: `sudo dnf install perl-Image-ExifTool`
+
+MacOS: `brew install exiftool`
+
+Windows:
+1. Download Exif Tool from https://exiftool.org/index.html
+2. Rename `exiftool(-k).exe` to `exiftool.exe`
+3. Move `uploader.py` to the same folder as `exiftool.exe`
+
+
 #### 2. Upload a folder of images
 
-The script outputs a link to the Cropilot editor, where the predictions will become available after processing. You can review and adjust the crop boxes before downloading the final crop instructions.
+The script outputs a link to the Cropilot editor, where the predictions will become available after processing. You can review and adjust the crop boxes before downloading the final crop instructions. From the folder where your `uploader.py` exists, execute:
 
 ```bash
 python3 uploader.py upload --api-key <GROUP_API_KEY> --input-folder sample_input
