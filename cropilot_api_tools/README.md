@@ -124,12 +124,81 @@ COMET_ML_API_KEY=<your-api-key>
 pip install -r requirements-trainer.txt
 ```
 
-#### 2. Start training
+#### 2. Describe your jobs in a config file
 
-Provide the group API key, a name for the new model, and a list of title IDs that should be used for training.
+The trainer is driven by a single YAML config file that describes every
+fine-tuning job. Copy the provided example and fill in your real API keys:
 
 ```bash
-python3 trainer.py --api-key <GROUP_API_KEY> --model-name my-new-model --title-ids title1 title2 title3 --train-position
+cp jobs.example.yaml jobs.yaml
+```
+
+> **Note:** `jobs.yaml` contains group API keys, so it is git-ignored. Keep your
+> keys out of version control and never paste them on the command line.
+
+The file has three sections. Values are resolved with the precedence
+`defaults < group < job`, so each job only needs to state what differs.
+
+```yaml
+# Inherited by every job unless overridden.
+defaults:
+  api_url: https://api.cropilot.trinera.cloud/
+  base_model: base_models/default.pt
+  val_split: 0.2
+  position:            # YOLO position hyperparameters (override per job)
+    epochs: 500
+    batch: 32
+    # ... scale, flipud, fliplr, close_mosaic, degrees, shear
+  rotation:            # ResNet rotation hyperparameters
+    base_model: base_models/rotate-300e-best.pth
+    extra_epochs: 50
+
+# Named groups holding the API key (and optionally a custom api_url).
+groups:
+  group-name:
+    api_key: <GROUP_API_KEY>
+
+# The models to train.
+jobs:
+  - name: my-new-model
+    group: group-name                 # references a group above
+    base_model: base_models/default.pt
+    train_position: true       # both flags must be stated explicitly
+    train_rotation: false
+    position:
+      epochs: 600              # overrides the default just for this job
+    title_ids:
+      - title1
+      - title2
+      - title3
+```
+
+Notes:
+
+- `imgsz` and `max_det` are intentionally **not** configurable and stay
+  hardcoded in `trainer.py`.
+- The position block also accepts `patience` (early-stopping patience) and the
+  optional fine-tuning knobs `lr0` (initial learning rate) and `freeze` (number
+  of layers to freeze). `lr0`/`freeze` are only passed to YOLO when present,
+  otherwise the Ultralytics defaults apply.
+- `train_position` and `train_rotation` have no default — set them on every job.
+- The position model trains on raw, un-deskewed images that match production:
+  the full spread with one box per page ("double_*"), plus raw single-page
+  images obtained by cutting each spread at the gutter ("single_*"). The
+  rotation model uses the deskewed per-page crops. The train/val split is done
+  per scan, so all artifacts of one scan stay on the same side (no leakage).
+- Each job runs in its own Comet.ml experiment (so `--all` does not merge runs),
+  logging the resolved hyperparameters, dataset statistics, result metrics, and
+  the trained model and config as assets.
+
+See `jobs.example.yaml` for a complete, working example.
+
+#### 3. Start training
+
+Select jobs by name (repeatable) or run them all:
+
+```bash
+python3 -m cropilot_api_tools.trainer --config jobs.yaml --job my-new-model
 ```
 
 After the script finishes, the new model will be available in the Cropilot UI. You can also use it from `uploader.py` by passing it as the model parameter.
@@ -137,17 +206,28 @@ After the script finishes, the new model will be available in the Cropilot UI. Y
 Options:
 
 ```text
--h, --help                          show this help message and exit
---api-url API_URL                   Base URL of the API.
-                                    Defaults to https://app.cropilot.cz/
---base-model BASE_MODEL             Path to the base YOLO model to fine-tune.
-                                    Defaults to base_models/default.pt
---api-key API_KEY                   Group API key for authentication.
---model-name MODEL_NAME             New name of the fine-tuned model.
---title-ids TITLE_IDS [TITLE_IDS ...]
-                                    List of title IDs to train on.
---train-rotation                    Train the ResNet rotation model.
---train-position                    Train the YOLO position model.
+-h, --help          show this help message and exit
+--config CONFIG     Path to the jobs YAML config file (required).
+--job JOB           Name of a job to run. Repeat to run several jobs.
+--all               Run every job defined in the config file.
+--list              List the selected jobs with resolved parameters and exit.
+--dry-run           Build the dataset but skip training (validation only).
+```
+
+Examples:
+
+```bash
+# Run several jobs
+... --config jobs.yaml --job my-new-model --job another-model
+
+# Run everything
+... --config jobs.yaml --all
+
+# Inspect what would be trained, without training
+... --config jobs.yaml --all --list
+
+# Verify the config and dataset download without training
+... --config jobs.yaml --job my-new-model --dry-run
 ```
 
 ## Tip: Run scripts with `uv`
@@ -175,5 +255,5 @@ uv run -m cropilot_api_tools.uploader download --api-key <GROUP_API_KEY> --title
 And the trainer, as...
 
 ```bash
-uv run -m cropilot_api_tools.trainer --api-key <GROUP_API_KEY> --model-name my-new-model --title-ids title1 title2 title3 --train-position
+uv run -m --env-file cropilot_api_tools/.env cropilot_api_tools.trainer --config cropilot_api_tools/jobs.yaml --job my-new-model
 ```

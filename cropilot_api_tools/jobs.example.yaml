@@ -1,0 +1,76 @@
+# =============================================================================
+# Cropilot finetune – training jobs configuration
+# =============================================================================
+# Run:
+#   uv run -m --env-file cropilot_api_tools/.env cropilot_api_tools.trainer \
+#       --config jobs.yaml --job model-1
+#
+#   --job <name>   run a specific job (repeatable)
+#   --all          run every job in the file
+#   --list         print jobs with their resolved parameters, train nothing
+#   --dry-run      validate config + build dataset, but skip training
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# defaults: inherited by every job unless the job overrides the value
+# -----------------------------------------------------------------------------
+defaults:
+  api_url: https://api.cropilot.trinera.cloud/
+  base_model: base_models/default.pt
+  val_split: 0.2          # 20% goes to validation
+
+  # YOLO position model hyperparameters (override for finetune_crop_model).
+  # imgsz and max_det stay hardcoded in the code.
+  position:
+    epochs: 100
+    batch: 32
+    scale: 0.5
+    flipud: 0
+    fliplr: 0.5
+    close_mosaic: 10
+    degrees: 4
+    shear: 1.0
+    patience: 30         # early-stopping patience (epochs without improvement)
+    single_page_fraction: 0.25  # fraction of spreads that also yield single
+                                # pages -> singles:doubles ratio = 2*fraction:1
+                                # (0.0 = doubles only, 1.0 = both pages always)
+    # Optional fine-tuning knobs (omit to use Ultralytics defaults):
+    # lr0: 0.002          # lower initial LR to avoid forgetting the base model
+    # freeze: 10          # freeze the first N layers (backbone) during finetune
+
+  # ResNet rotation model hyperparameters (used by finetune_rotation_model).
+  rotation:
+    base_model: base_models/rotate-300e-best.pth
+    extra_epochs: 50      # epochs = start_epoch + extra_epochs
+
+# -----------------------------------------------------------------------------
+# groups: per-group API keys (optionally a custom api_url)
+# A job references a group via `group: <name>` and inherits its key.
+# -----------------------------------------------------------------------------
+groups:
+  group1:
+    api_key: xxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx
+  group2:
+    api_key: yyyyyyyy-yyyyyyyyy-yyyyyyyyy-yyyyyyyyy-yyyyyyyyy-yyyyyyyyy
+
+# -----------------------------------------------------------------------------
+# jobs: individual models. Parameters are resolved in the order
+#       defaults < group < job (job overrides everything).
+# -----------------------------------------------------------------------------
+jobs:
+  - name: model-1
+    group: group1
+    base_model: base_models/default.pt
+    train_position: true
+    train_rotation: false
+    title_ids:
+      - id1
+      - id2
+
+  - name: model-2
+    group: group2
+    base_model: model-1.pt
+    train_position: true
+    train_rotation: false
+    title_ids:
+      - id3

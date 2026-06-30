@@ -23,7 +23,15 @@ def set_device():
 def get_filepaths(dir: str) -> list[str]:
     files = sorted([os.path.join(dir, f) for f in os.listdir(dir)])
 
-    return [f for f in files if os.path.isfile(f) and not f.startswith("double_")]
+    # Exclude position-only artifacts (full spreads and raw single-page crops);
+    # the rotation model trains on the deskewed per-page crops only. Compare the
+    # basename, not the full path, so the prefixes actually match.
+    excluded = ("double_", "single_")
+    return [
+        f
+        for f in files
+        if os.path.isfile(f) and not os.path.basename(f).startswith(excluded)
+    ]
 
 
 def get_bbox_vectors(dir: str) -> list[tuple[float, float, float, float]]:

@@ -17,3 +17,5 @@ datasets/
 crop_finetune_model/
 rotate_finetune_model/
 exports/
+
+jobs.yaml
