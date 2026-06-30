@@ -29,7 +29,7 @@ def find_exiftool() -> str | None:
 
 
 def copy_metadata_with_exiftool(source_path: str, output_path: str):
-    """Copies the original metadata tree and profiles onto a cropped output image."""
+    """Copies metadata onto a cropped image and marks pixels as already oriented."""
     exiftool = find_exiftool()
     if not exiftool:
         raise RuntimeError(
@@ -260,10 +260,20 @@ class CropilotUploader:
                     int(yc - hh / 2) : int(yc + hh / 2),
                     int(xc - ww / 2) : int(xc + ww / 2),
                 ]
+                # fix orientation if needed
+                orientation = page.get("orientation", coordinate.get("orientation", 0))
+                rotation_map = {
+                    90: cv2.ROTATE_90_CLOCKWISE,
+                    180: cv2.ROTATE_180,
+                    270: cv2.ROTATE_90_COUNTERCLOCKWISE,
+                }
+                if orientation in rotation_map:
+                    output_image = cv2.rotate(output_image, rotation_map[orientation])
 
                 # get properties of the original image
                 with Image.open(os.path.join(input_folder, img_name)) as orig_img:
                     save_kwargs = orig_img.info.copy()
+                    save_kwargs.pop("exif", None)
                     img_extension = orig_img.format.lower()
 
                 # rebuild output_path with preferred extension
