@@ -162,10 +162,10 @@ class CropilotUploader:
                     continue
                 im = im.convert("RGB")
                 im = ImageOps.exif_transpose(im)
-                im.thumbnail((1200, 1200))
+                im.thumbnail((1600, 1600), Image.LANCZOS)
                 buf = BytesIO()
                 # Convert to JPG
-                im.save(buf, format="JPEG")
+                im.save(buf, format="JPEG", quality=90)
                 img = img.rsplit(".", 1)[0] + ".jpg"
 
                 buf.seek(0)
