@@ -32,9 +32,10 @@ Fedora: `sudo dnf install perl-Image-ExifTool`
 MacOS: `brew install exiftool`
 
 Windows:
-1. Download Exif Tool from https://exiftool.org/index.html
-2. Rename `exiftool(-k).exe` to `exiftool.exe`
-3. Move `uploader.py` to the same folder as `exiftool.exe`
+1. Download the **Windows Executable** (`exiftool-XX_64.zip`) from https://exiftool.org/index.html and unzip it.
+2. Rename `exiftool(-k).exe` to `exiftool.exe`.
+3. Keep the `exiftool_files` folder next to `exiftool.exe` — the current ExifTool build needs it to run.
+4. Put `exiftool.exe` (together with its `exiftool_files` folder) in the same folder as `uploader.py`.
 
 
 #### 2. Upload a folder of images
