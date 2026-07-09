@@ -77,9 +77,9 @@ class CropilotUploader:
     used to crop the original high-resolution images.
     """
 
-    def __init__(self, api_url: str, api_key: str):
+    def __init__(self, api_url: str, api_key: str, web_url: str = "https://app.cropilot.cz"):
         self.api_url = api_url
-        self.web_url = "https://app.cropilot.cz"
+        self.web_url = web_url
         self.id = None
         self.coordinates = None
         self.api_key = api_key
@@ -359,6 +359,13 @@ if __name__ == "__main__":
         default="https://api.cropilot.trinera.cloud",
     )
     common.add_argument(
+        "--web-url",
+        type=str,
+        required=False,
+        help="Base URL of the Cropilot web app, defaults to https://app.cropilot.cz",
+        default="https://app.cropilot.cz",
+    )
+    common.add_argument(
         "--input-folder",
         type=str,
         help="Input folder path (containing images to process)",
@@ -413,7 +420,7 @@ if __name__ == "__main__":
 
     print(f"Starting Cropilot Uploader {args.command} for folder {args.input_folder}...")
 
-    tracer = CropilotUploader(api_url=args.api_url, api_key=args.api_key)
+    tracer = CropilotUploader(api_url=args.api_url, api_key=args.api_key, web_url=args.web_url)
 
     if args.command == "upload":
         if not args.name:
